@@ -1,6 +1,7 @@
 package com.amdocs.media.Authorizationservice.controller;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -20,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.amdocs.media.Authorizationservice.config.KafkaProducer;
 import com.amdocs.media.Authorizationservice.model.User;
+import com.amdocs.media.Authorizationservice.model.UserDAO;
 import com.amdocs.media.Authorizationservice.service.AuthService;
 
 @RunWith(SpringRunner.class)
@@ -30,7 +32,7 @@ public class MyControllerTest {
 	private MockMvc mockMvc;
 
 	@MockBean
-	private AuthService studentService;
+	private AuthService authService;
 
 	@MockBean
 	KafkaProducer kafkaSender;
@@ -45,7 +47,7 @@ public class MyControllerTest {
 
 		user.setUserName("Rahul");
 		user.setPassword("Rahul213");
-		Mockito.when(studentService.getuser(Mockito.anyString())).thenReturn(user);
+		Mockito.when(authService.getuser(Mockito.anyString())).thenReturn(user);
 
 		String expected = "{userName:Rahul, password:Rahul213}";
 
@@ -61,6 +63,53 @@ public class MyControllerTest {
 		System.out.println(result.getResponse().getContentAsString());
 
 		JSONAssert.assertEquals(expected, result.getResponse().getContentAsString(), false);
+
+	}
+
+	public UserDAO getDataSet() {
+		UserDAO userDAO = new UserDAO();
+		userDAO.setUserName("Rahul");
+		userDAO.setPassword("Rahul213");
+		userDAO.setAddress("INDIA");
+		userDAO.setPhonenumber(96542927);
+		userDAO.setTopic("POST");
+
+		return userDAO;
+	}
+
+	@Test
+	public void autheticateUserTestforPost() throws Exception {
+
+		String expected = "PROFILE CREATED SUCCESSFULLY";
+		String token = getDataSet().getTopic();
+
+		Mockito.when(authService.validateUser(getDataSet())).thenReturn(true);
+
+		Mockito.when(restTemplate.postForEntity("http://localhost:9091/assignment/login", getDataSet(), String.class))
+				.thenReturn(new ResponseEntity<String>(expected, HttpStatus.OK));
+
+		Assumptions.assumeTrue(token.equalsIgnoreCase("POST"));
+		
+		RequestBuilder requestBuilder = MockMvcRequestBuilders.post("/assignment/User").accept(MediaType.APPLICATION_JSON);
+		
+		MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+		
+		System.out.println(result.getResponse());
+	}
+
+	@Test
+	public void autheticateUserTestforPut() throws Exception {
+
+		String expected = "Profile Updated";
+		String token = "PUT";
+		UserDAO user = getDataSet();
+		user.setTopic("PUT");
+		Mockito.when(authService.validateUser(getDataSet())).thenReturn(true);
+		
+		Mockito.when(restTemplate.postForEntity("http://localhost:9091/assignment/login", user, String.class))
+		.thenReturn(new ResponseEntity<String>(expected, HttpStatus.OK));
+		
+		Assumptions.assumeTrue(token.equalsIgnoreCase("PUT"));
 
 	}
 
